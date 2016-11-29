@@ -34,32 +34,8 @@ while getopts "d:m" opt; do
 		esac
 done
 
-fullpath=$backupFilePath"/"$dateDir
 
-if [ $dest_flag = false ];then
-{	
-	echo "-d flag (destination) is required!"
-	exit 1
-}
-else
-{
-	if [ ! -d "$backupFilePath" ];then
-	{
-		echo "-d flag requires a valid directory! $backupFilePath does not exist!"
-		exit 1	
-	}
-	else
-	{
-		if [ ! -d $fullpath ];then 
-		{			
-		mkdir $fullpath
- 		}		
-		fi	
-	}	
-	fi
-}
-fi
-
+#Create logfile in /tmp
 logfile=$(mktemp -p /tmp/ -t $(date '+%w-%m%d%y').XXXXX );
 status=$(expr $status \| $?)
 
@@ -77,7 +53,40 @@ fi;
 	
 
 
-#backup config
+
+
+#Check if file path exists, create subdirectory if parent exists.
+fullpath=$backupFilePath"/"$dateDir
+if [ $dest_flag = false ];then
+{	
+	echo "-d flag (destination) is required!" >> $logfile
+	rm $logfile
+	exit 1
+}
+else
+{
+	if [ ! -d "$backupFilePath" ];then
+	{
+		echo "'$backupFilePath' does not exist, the -d flag requires a valid directory!" >> $logfile
+		rm $logfile		
+		exit 1	
+	}
+	else
+	{
+		if [ ! -d $fullpath ];then 
+		{			
+			mkdir $fullpath
+ 		}		
+		fi	
+	}	
+	fi
+}
+fi
+
+
+
+
+#backup config ldap database
 backupConfig=$( slapcat -b cn=config -l "$fullpath/"config-$(date '+%w')-attempt.ldif >> $logfile 2>&1)
 status=$(expr $status \| $?)
 if [ $status -ne "0" ];then
@@ -91,11 +100,14 @@ else
 	mv "$fullpath/"config-$(date '+%w')-attempt.ldif "$fullpath/"config-$(date '+%w').ldif
 }
 fi;
+
+
 #get ldap db suffixes and loop through them with slapcat
 dbSuffixes=$( slapcat -b cn=config | grep "^olcSuffix" | cut -d " " -f2- );
 for i in $dbSuffixes;do
 	backupDBs=$(slapcat -b $i -l "$fullpath/"ldap$counter-$(date '+%w')-attempt.ldif >> $logfile 2>&1);
 done;
+
 status=$(expr $status \| $?)
 
 if [ $status -ne 0 ];then
@@ -106,6 +118,7 @@ if [ $status -ne 0 ];then
 	done;
 	counter=$(($counter +1))
 }
+
 else
 {
 	for i in $dbSuffixes;do
