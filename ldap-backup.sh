@@ -8,6 +8,31 @@ status=0
 counter=1
 dateDir=$(date '+%w')
 fullDate=$(date '+%Y/%m/%d')
+
+function endScript {
+	if [ $domail = true ]; then
+	{
+		if [ $status -ne 0 ];then 
+		{
+			cat $logfile | mail -s "$cmd  FAIL $fullDate" lgardner@techsquare.com
+		}
+		else
+		{
+			cat $logfile | mail -s "$cmd  SUCCESS $fullDate" lgardner@techsquare.com
+		}
+		fi
+	}
+	else
+	{
+		cat $logfile
+		echo EXIT STATUS $status
+	}
+	fi
+	rm $logfile
+	exit $status;
+}
+
+
 if [[ $EUID -ne 0 ]];then
 	echo "Script must be run as root"
 	exit 1
@@ -42,7 +67,7 @@ status=$(expr $status \| $?)
 if [ $status != 0 ];then
 {
 	echo "Failed to create log file in /tmp/";
-	exit 1;
+	endScript
 }
 else
 {
@@ -60,16 +85,16 @@ fullpath=$backupFilePath"/"$dateDir
 if [ $dest_flag = false ];then
 {	
 	echo "-d flag (destination) is required!" >> $logfile
-	rm $logfile
-	exit 1
+	status=1	
+	endScript
 }
 else
 {
 	if [ ! -d "$backupFilePath" ];then
 	{
-		echo "'$backupFilePath' does not exist, the -d flag requires a valid directory!" >> $logfile
-		rm $logfile		
-		exit 1	
+		echo "'$backupFilePath' does not exist, the -d flag requires a valid directory!" >> $logfile		
+		status=1		
+		endScript
 	}
 	else
 	{
@@ -129,26 +154,7 @@ else
 }
 fi
 
+endScript
 
 
 
-if [ $domail = true ]; then
-{
-	if [ $status -ne 0 ];then 
-	{
-		cat $logfile | mail -s "$cmd  FAIL $fullDate" lgardner@techsquare.com
-	}
-	else
-	{
-		cat $logfile | mail -s "$cmd  SUCCESS $fullDate" lgardner@techsquare.com
-	}
-	fi
-}
-else
-{
-	cat $logfile
-	echo EXIT STATUS $status
-}
-fi
-rm $logfile
-exit $status;
