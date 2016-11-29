@@ -45,7 +45,7 @@ else
 {
 	if [ ! -d "$backupFilePath" ];then
 	{
-		echo "-d flag requires a valid directory!"
+		echo "-d flag requires a valid directory! $backupFilePath does not exist!"
 		exit 1	
 	}
 	else
